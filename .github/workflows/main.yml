@@ -46,18 +46,22 @@ jobs:
           echo "Retrying..."
         continue-on-error: true
 
+      - name: Log in to Docker with PAT
+        run: |
+          echo ${{ secrets.DOCKER_PAT }} | docker login -u wsalas19 --password-stdin
+        env:
+          DOCKER_PAT: ${{ secrets.DOCKER_PAT }}
+
       - name: Build Docker image
         run: |
           docker build -t test_next_app:latest .
         env:
           DOCKER_BUILDKIT: 1
+
       - name: Push Docker image to Docker Hub
         run: |
-          docker login -u ${{ secrets.DOCKER_USERNAME }} -p ${{ secrets.DOCKER_PASSWORD }}
           docker push test_next_app:latest
-        env:
-          DOCKER_USERNAME: ${{ secrets.DOCKER_USERNAME }}
-          DOCKER_PASSWORD: ${{ secrets.DOCKER_PASSWORD }}
+        # No need to log in again here, as the login session is retained from the previous step
 
   deploy:
     runs-on: ubuntu-latest
@@ -66,11 +70,5 @@ jobs:
     steps:
       - name: Deploy to Vercel
         run: |
-          docker login -u ${{ secrets.DOCKER_USERNAME }} -p ${{ secrets.DOCKER_PASSWORD }}
           docker pull test_next_app:latest
-
           npx vercel --prod --token ${{ secrets.VERCEL_TOKEN }} --docker test_next_app:latest
-        env:
-          DOCKER_USERNAME: ${{ secrets.DOCKER_USERNAME }}
-          DOCKER_PASSWORD: ${{ secrets.DOCKER_PASSWORD }}
-          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
